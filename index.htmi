@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Pong - vinius-sudo</title>
+<style>
+  body { margin:0; background:#111; color:white; font-family:Arial; display:flex; flex-direction:column; align-items:center; }
+  #score { font-size:40px; margin:20px; }
+  canvas { background:#000; border:3px solid #fff; cursor:none; }
+  p { color:#888; }
+</style>
+</head>
+<body>
+<div id="score">0 : 0</div>
+<canvas id="game" width="800" height="500"></canvas>
+<p>Left Paddle: Mouse or UP/DOWN arrows | First to 5 wins</p>
+
+<script>
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+const scoreEl = document.getElementById('score');
+
+let leftY = 200, rightY = 200;
+let ballX = 400, ballY = 250;
+let ballVX = 5, ballVY = 3;
+let leftScore = 0, rightScore = 0;
+let keys = {};
+
+const PADDLE_H = 100, PADDLE_W = 12, BALL_R = 10;
+
+// Controls
+canvas.addEventListener('mousemove', e => {
+  const rect = canvas.getBoundingClientRect();
+  leftY = e.clientY - rect.top - PADDLE_H/2;
+});
+
+document.addEventListener('keydown', e => keys[e.key] = true);
+document.addEventListener('keyup', e => keys[e.key] = false);
+
+function update() {
+  // Player movement with arrows
+  if(keys['ArrowUp']) leftY -= 7;
+  if(keys['ArrowDown']) leftY += 7;
+  leftY = Math.max(0, Math.min(canvas.height - PADDLE_H, leftY));
+
+  // Computer AI
+  let target = ballY - PADDLE_H/2;
+  rightY += (target - rightY) * 0.07; // smooth follow
+
+  // Ball move
+  ballX += ballVX;
+  ballY += ballVY;
+
+  // Wall collision (top/bottom)
+  if(ballY < BALL_R || ballY > canvas.height - BALL_R) {
+    ballVY *= -1;
+  }
+
+  // Left paddle collision
+  if(ballX < 30 + PADDLE_W && ballY > leftY && ballY < leftY + PADDLE_H) {
+    ballX = 30 + PADDLE_W + BALL_R;
+    ballVX *= -1.1; // speed up
+    ballVY += (Math.random()-0.5)*2;
+  }
+
+  // Right paddle collision
+  if(ballX > canvas.width - 30 - PADDLE_W - BALL_R && ballY > rightY && ballY < rightY + PADDLE_H) {
+    ballX = canvas.width - 30 - PADDLE_W - BALL_R*2;
+    ballVX *= -1.1;
+  }
+
+  // Score
+  if(ballX < 0) { rightScore++; resetBall(); }
+  if(ballX > canvas.width) { leftScore++; resetBall(); }
+  
+  scoreEl.textContent = `${leftScore} : ${rightScore}`;
+}
+
+function resetBall() {
+  ballX = 400; ballY = 250;
+  ballVX = (ballVX > 0 ? -5 : 5);
+  ballVY = (Math.random()*6 -3);
+  if(leftScore==5 || rightScore==5) {
+    alert((leftScore==5?"You Win!":"Computer Wins!")+" Refresh to play again");
+    leftScore=0; rightScore=0;
+  }
+}
+
+function draw() {
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  // dotted middle line
+  ctx.setLineDash([10,10]); ctx.beginPath(); ctx.moveTo(400,0); ctx.lineTo(400,500); ctx.strokeStyle="#333"; ctx.stroke(); ctx.setLineDash([]);
+  // paddles
+  ctx.fillStyle="white";
+  ctx.fillRect(20, leftY, PADDLE_W, PADDLE_H);
+  ctx.fillRect(canvas.width-20-PADDLE_W, rightY, PADDLE_W, PADDLE_H);
+  // ball
+  ctx.beginPath(); ctx.arc(ballX, ballY, BALL_R, 0, Math.PI*2); ctx.fill();
+}
+
+function loop() { update(); draw(); requestAnimationFrame(loop); }
+loop();
+</script>
+</body>
+</html>
